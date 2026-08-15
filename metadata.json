@@ -1,0 +1,7 @@
+{
+  "name": "Nigerian AI News Hub",
+  "description": "Nigeria Daily AI Hub - AI-powered Nigerian news aggregation, verification, and editorial synthesis monitoring top 5 Nigerian news sources.",
+  "requestFramePermissions": [],
+
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
