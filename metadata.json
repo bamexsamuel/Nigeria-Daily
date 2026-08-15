@@ -1,7 +1,6 @@
 {
   "name": "Nigerian AI News Hub",
-  "description": "Nigeria Daily AI Hub - AI-powered Nigerian news aggregation, verification, and editorial synthesis monitoring top 5 Nigerian news sources.",
+  "description": "Nigeria Daily Dispatch - Verified multi-source Nigerian news aggregation, fact-checking, and editorial dispatches from top Nigerian press wire outlets.",
   "requestFramePermissions": [],
-
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

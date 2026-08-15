@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, ShieldCheck, Sparkles, Scale, FileText, CheckCircle2 } from 'lucide-react';
+import { X, ShieldCheck, Scale, FileText, CheckCircle2, Newspaper } from 'lucide-react';
 
 interface PolicyModalProps {
   type: 'editorial' | 'ai' | 'about' | 'privacy';
@@ -8,19 +8,19 @@ interface PolicyModalProps {
 
 export const PolicyModal: React.FC<PolicyModalProps> = ({ type, onClose }) => {
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/75 backdrop-blur-xs flex justify-center items-center p-4">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-xs flex justify-center items-center p-4">
       <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden border border-slate-200 flex flex-col max-h-[85vh]">
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
           <div className="flex items-center gap-2">
-            {type === 'ai' && <Sparkles className="w-5 h-5 text-[#008751]" />}
+            {type === 'ai' && <ShieldCheck className="w-5 h-5 text-[#008751]" />}
             {type === 'editorial' && <Scale className="w-5 h-5 text-[#008751]" />}
-            {type === 'about' && <ShieldCheck className="w-5 h-5 text-[#008751]" />}
+            {type === 'about' && <Newspaper className="w-5 h-5 text-[#008751]" />}
             {type === 'privacy' && <FileText className="w-5 h-5 text-[#008751]" />}
             <h2 className="text-base font-black text-slate-900 font-serif">
-              {type === 'ai' && 'AI Editorial Transparency & Disclosure'}
-              {type === 'editorial' && 'Editorial Integrity & Attribution Policy'}
-              {type === 'about' && 'About Nigerian AI News Hub'}
+              {type === 'ai' && 'Editorial Verification & Standards Disclosure'}
+              {type === 'editorial' && 'Editorial Integrity & Multi-Source Wire Policy'}
+              {type === 'about' && 'About Nigeria Daily Dispatch'}
               {type === 'privacy' && 'Privacy & Publisher Compliance'}
             </h2>
           </div>
@@ -39,48 +39,48 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({ type, onClose }) => {
               <div className="bg-emerald-50 border border-emerald-300 p-4 rounded-xl shadow-2xs">
                 <h3 className="font-bold text-emerald-950 text-sm mb-1 flex items-center gap-1.5">
                   <CheckCircle2 className="w-4 h-4 text-[#008751]" />
-                  Responsible AI Journalism Mandate
+                  Responsible Journalism & Verification Mandate
                 </h3>
                 <p className="text-xs text-emerald-900 leading-normal">
-                  Nigerian AI News Hub operates an automated editorial synthesis pipeline utilizing Google Gemini. We extract factual information from authorized, reputable Nigerian news sources and rewrite them into objective, concise, and structured summaries.
+                  Nigeria Daily Dispatch operates a structured editorial verification pipeline. We extract factual information from authorized, reputable Nigerian news sources and present them into objective, concise, and verifiable reports.
                 </p>
               </div>
 
-              <h4 className="font-bold text-slate-900">1. Fact-First Verification Engine</h4>
+              <h4 className="font-bold text-slate-900">1. Fact-First Verification Protocol</h4>
               <p>
-                The AI is constrained by strict temperature parameters and deterministic schemas to prevent hallucination. It is forbidden from inventing names, official quotes, statistics, or dates.
+                All data points are corroborated against multiple reputable Nigerian media reports and verified official announcements. Speculative rumors, uncorroborated claims, and unverified allegations are filtered.
               </p>
 
-              <h4 className="font-bold text-slate-900">2. Sensitivity Gate</h4>
+              <h4 className="font-bold text-slate-900">2. Sensitivity & Safety Gate</h4>
               <p>
-                Stories touching upon fatalities, unconfirmed criminal accusations, ongoing trials, and election disputes are flagged with a low confidence threshold and held in an administrative Review Queue prior to publication.
+                Stories touching upon fatalities, unconfirmed criminal accusations, ongoing trials, and election disputes are flagged with strict verification thresholds prior to dissemination.
               </p>
 
-              <h4 className="font-bold text-slate-900">3. Confidence Scoring</h4>
+              <h4 className="font-bold text-slate-900">3. Corroboration Scoring</h4>
               <p>
-                Each published dispatch displays an AI Confidence Score (0-100%) indicating source corroboration density and clarity.
+                Each published dispatch displays a Corroboration & Fact Score (0-100%) indicating source density, confirmation across multiple newsrooms, and official record alignment.
               </p>
             </>
           )}
 
           {type === 'editorial' && (
             <>
-              <h3 className="font-bold text-slate-900 text-base">Top 5 Nigerian Channels Attribution Standard</h3>
+              <h3 className="font-bold text-slate-900 text-base">Top 5 Nigerian Press Wire Attribution Standard</h3>
               <p>
-                We recognize that original investigative reporting is conducted by premier Nigerian press organizations, notably <strong>Channels Television, The Punch, Premium Times, Vanguard News, and The Guardian Nigeria</strong>.
+                We recognize and celebrate the investigative reporting conducted by Nigeria's leading press institutions: <strong>The Punch, Channels Television, Premium Times, Vanguard News, and The Guardian Nigeria</strong>.
               </p>
               <p>
-                Every synthesized article prominently features:
+                Every published dispatch prominently features:
               </p>
               <ul className="list-disc pl-5 space-y-1 text-slate-600">
-                <li>Primary publisher name and badge</li>
-                <li>Direct outbound hyperlink labeled "Read Original Report"</li>
+                <li>Primary publisher name and verified attribution badge</li>
+                <li>Direct outbound hyperlink labeled "Read Original on [Outlet]"</li>
                 <li>Corroborated secondary source listings</li>
-                <li>Original discovery and publication timestamps in West Africa Time (WAT)</li>
+                <li>Original publication timestamps in West Africa Time (WAT)</li>
               </ul>
               <h4 className="font-bold text-slate-900 mt-3">Corrections & Right of Reply</h4>
               <p>
-                If an official agency or referenced party provides a rejoinder or factual correction, the system automatically updates the article's story cluster and indicates the timestamped modification.
+                If an official agency or referenced party provides a rejoinder or factual correction, the story cluster is immediately updated to reflect the latest verified facts.
               </p>
             </>
           )}
@@ -88,15 +88,15 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({ type, onClose }) => {
           {type === 'about' && (
             <>
               <p>
-                <strong>Nigerian AI News Hub</strong> is a next-generation news platform engineered for Nigerian audiences at home and across the diaspora.
+                <strong>Nigeria Daily Dispatch</strong> is a national news aggregation and multi-source verification platform engineered for Nigerian citizens, policymakers, business leaders, and the global diaspora.
               </p>
               <p>
-                By continuous real-time monitoring of Nigeria's top 5 news broadcasters and newspapers, our engine condenses breaking national affairs, CBN monetary policies, federal legislative actions, tech ecosystem milestones, and sports into fast, readable executive summaries.
+                By continuous real-time monitoring of Nigeria's top 5 news broadcasters and newspapers, our newsroom condenses breaking national affairs, CBN monetary policies, federal legislative actions, infrastructure milestones, and sports into fast, verified executive reports.
               </p>
               <div className="bg-slate-100 p-4 rounded-xl border border-slate-200 text-xs">
-                <p className="font-semibold text-slate-900 mb-1">Contact Newsroom & AI Bureau:</p>
-                <p className="text-slate-600">Editorial Desk: newsroom@nigerianainewshub.ng</p>
-                <p className="text-slate-600">Lagos Bureau: Victoria Island / Abuja FCT</p>
+                <p className="font-semibold text-slate-900 mb-1">Contact Newsroom Desk:</p>
+                <p className="text-slate-600">Editorial Desk: newsroom@nigeriadaily.ng</p>
+                <p className="text-slate-600">National Bureau: Victoria Island, Lagos / Abuja FCT</p>
               </div>
             </>
           )}
@@ -105,10 +105,10 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({ type, onClose }) => {
             <>
               <h3 className="font-bold text-slate-900">Privacy & RSS Fair-Use Compliance</h3>
               <p>
-                Nigerian AI News Hub respects intellectual property, publisher copyright, and robots.txt directives. We ingest publicly syndicated RSS feeds for metadata and indexing, synthesizing original structured analytical summaries while always linking back directly to publisher landing pages.
+                Nigeria Daily Dispatch respects intellectual property, publisher copyright, and web standards. We ingest publicly syndicated RSS feeds for metadata and indexing, synthesizing original structured analytical summaries while always linking back directly to publisher landing pages.
               </p>
               <p>
-                No personally identifiable information (PII) is sold or distributed. Subscriber emails for the Daily Nigerian News Digest are stored securely and never shared with third parties.
+                No personally identifiable information (PII) is sold or distributed. Subscriber emails for the Daily Morning Briefing are stored securely and never shared with third parties.
               </p>
             </>
           )}

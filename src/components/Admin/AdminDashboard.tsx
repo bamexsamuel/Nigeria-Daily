@@ -5,7 +5,7 @@ import {
 import { 
   LayoutDashboard, FileText, ShieldCheck, Play, Settings, 
   Activity, ArrowLeft, RefreshCw, AlertTriangle, CheckCircle2, 
-  Flame, TrendingUp, Sparkles, Plus, ExternalLink, Database
+  Flame, TrendingUp, Plus, ExternalLink, Database, Newspaper
 } from 'lucide-react';
 import { ArticlesManager } from './ArticlesManager';
 import { SourcesManager } from './SourcesManager';
@@ -59,10 +59,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-serif font-black text-base text-white">
-                  Nigerian AI Newsroom
+                  Nigeria Daily Newsroom
                 </span>
                 <span className="bg-[#008751] text-white text-[10px] font-bold px-1.5 py-0.2 rounded font-mono">
-                  PROD v1.0
+                  WIRE DESK
                 </span>
               </div>
               <p className="text-[10px] text-slate-400">
@@ -87,12 +87,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <div className="flex items-center space-x-2 overflow-x-auto py-1 scrollbar-none">
             {[
               { id: 'overview', label: 'Dashboard Overview', icon: LayoutDashboard },
-              { id: 'articles', label: `Articles & Review (${pendingReviewCount})`, icon: FileText, badge: pendingReviewCount > 0 },
-              { id: 'sources', label: 'Top 5 Sources', icon: ShieldCheck },
-              { id: 'pipeline', label: 'AI Ingestion Pipeline', icon: Play },
-              { id: 'supabase', label: 'Supabase & Vercel Sync', icon: Database },
+              { id: 'articles', label: `Dispatches & Review (${pendingReviewCount})`, icon: FileText, badge: pendingReviewCount > 0 },
+              { id: 'sources', label: 'Top 5 Press Outlets', icon: ShieldCheck },
+              { id: 'pipeline', label: 'Ingestion & Wire Pipeline', icon: Play },
+              { id: 'supabase', label: 'Database & Sync', icon: Database },
               { id: 'health', label: 'System Health & Logs', icon: Activity },
-              { id: 'settings', label: 'Editorial AI Settings', icon: Settings }
+              { id: 'settings', label: 'Editorial Desk Settings', icon: Settings }
             ].map(t => {
 
               const Icon = t.icon;
@@ -139,7 +139,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     Live
                   </span>
                 </div>
-                <span className="text-[10px] text-slate-400 mt-1 block">Full AI synthesis</span>
+                <span className="text-[10px] text-slate-400 mt-1 block">Full editorial verification</span>
               </div>
 
               <div 
@@ -164,7 +164,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
               <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                  Top 5 Channels Online
+                  Top 5 Press Desks Online
                 </span>
                 <div className="flex items-baseline justify-between">
                   <span className="text-2xl font-black text-slate-900 font-serif">
@@ -174,7 +174,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     100% Active
                   </span>
                 </div>
-                <span className="text-[10px] text-slate-400 mt-1 block">Channels TV, Punch, PT, etc.</span>
+                <span className="text-[10px] text-slate-400 mt-1 block">Punch, Channels TV, Vanguard, etc.</span>
               </div>
 
               <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
@@ -189,7 +189,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     Deduped
                   </span>
                 </div>
-                <span className="text-[10px] text-slate-400 mt-1 block">Tokens & cost saved</span>
+                <span className="text-[10px] text-slate-400 mt-1 block">Cluster corroborated</span>
               </div>
             </div>
 
@@ -197,8 +197,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 text-white rounded-2xl p-6 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4 border border-slate-700">
               <div>
                 <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase mb-1">
-                  <Sparkles className="w-4 h-4" />
-                  Gemini News Synthesis Ready
+                  <Newspaper className="w-4 h-4" />
+                  Press Wire Ingestion Engine
                 </div>
                 <h3 className="text-lg font-black font-serif">
                   Automated Content Discovery & Nigerian Press Intelligence
@@ -223,7 +223,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <div className="lg:col-span-8 bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
                 <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-200">
                   <h3 className="font-bold text-sm text-slate-900 font-serif">
-                    Latest Synthesized Dispatches
+                    Latest Verified Dispatches
                   </h3>
                   <button
                     onClick={() => setActiveTab('articles')}
@@ -242,7 +242,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           <span>•</span>
                           <span>{story.primarySourceName}</span>
                           <span>•</span>
-                          <span className="font-mono text-emerald-700 font-bold">{story.confidenceScore}% Trust</span>
+                          <span className="font-mono text-emerald-700 font-bold">{story.confidenceScore}% Corroborated</span>
                         </div>
                         <h4 className="font-bold text-xs text-slate-900 font-serif truncate">
                           {story.headline}
@@ -280,7 +280,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                 <div className="pt-4 mt-4 border-t border-slate-100 text-xs text-slate-500">
                   <p className="font-semibold text-slate-700">Auto-Publish Threshold:</p>
-                  <p>Minimum {settings.minConfidenceThreshold}% confidence score required.</p>
+                  <p>Minimum {settings.minConfidenceThreshold}% verification score required.</p>
                 </div>
               </div>
             </div>

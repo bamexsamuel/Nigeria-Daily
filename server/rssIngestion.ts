@@ -86,11 +86,12 @@ function extractImageFromItem(item: any, rawXmlSnippet?: string): string | undef
 async function fetchOgImageFromUrl(articleUrl: string): Promise<string | undefined> {
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 4000);
+    const timeout = setTimeout(() => controller.abort(), 2500);
     const resp = await fetch(articleUrl, {
       signal: controller.signal,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
       }
     });
     clearTimeout(timeout);
@@ -103,36 +104,31 @@ async function fetchOgImageFromUrl(articleUrl: string): Promise<string | undefin
       return ogMatch[1].trim();
     }
   } catch {
-    // Gracefully ignore network timeout on og:image fetch
+    // Gracefully ignore network timeout or abort on og:image fetch
   }
   return undefined;
 }
 
-// Feeds per source (primary and politics/national category feeds)
+// Feeds per source - prioritizing the fastest, canonical root feeds
 const SOURCE_FEED_URLS: Record<string, string[]> = {
   'src-punch-ng': [
-    'https://punchng.com/topics/politics/feed/',
-    'https://punchng.com/topics/news/feed/',
-    'https://punchng.com/feed/'
+    'https://punchng.com/feed/',
+    'https://punchng.com/topics/news/feed/'
   ],
   'src-channels-tv': [
-    'https://www.channelstv.com/category/politics/feed/',
-    'https://www.channelstv.com/feed/'
+    'https://www.channelstv.com/feed/',
+    'https://www.channelstv.com/category/politics/feed/'
   ],
   'src-premium-times': [
-    'https://www.premiumtimesng.com/category/news/top-news/feed',
-    'https://www.premiumtimesng.com/category/news/feed',
-    'https://www.premiumtimesng.com/feed'
+    'https://www.premiumtimesng.com/feed',
+    'https://www.premiumtimesng.com/category/news/feed'
   ],
   'src-vanguard-ngr': [
-    'https://www.vanguardngr.com/category/politics/feed/',
-    'https://www.vanguardngr.com/category/national-news/feed/',
     'https://www.vanguardngr.com/feed/'
   ],
   'src-guardian-ng': [
-    'https://guardian.ng/category/politics/feed/',
-    'https://guardian.ng/category/news/feed/',
-    'https://guardian.ng/feed/'
+    'https://guardian.ng/feed/',
+    'https://guardian.ng/category/news/feed/'
   ]
 };
 
@@ -153,13 +149,15 @@ export async function fetchFeedForSource(source: NewsSource): Promise<{
     for (const url of feedUrls) {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
 
         const response = await fetch(url, {
           signal: controller.signal,
           headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 NigerianAINewsHub/1.0',
-            'Accept': 'application/rss+xml, application/xml, text/xml, application/atom+xml, */*'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            'Accept': 'application/rss+xml, application/xml, text/xml, application/atom+xml, text/html, */*',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Cache-Control': 'no-cache'
           }
         });
         clearTimeout(timeoutId);
@@ -226,7 +224,11 @@ export async function fetchFeedForSource(source: NewsSource): Promise<{
           newItemsAdded++;
         }
       } catch (err: any) {
-        console.warn(`Feed sync failed for sub-URL ${url}:`, err.message);
+        if (err.name === 'AbortError' || err.message?.includes('aborted')) {
+          console.warn(`Feed timeout for ${url}, skipping.`);
+        } else {
+          console.warn(`Feed sync notice for ${url}:`, err.message);
+        }
       }
     }
 

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, ShieldCheck, Radio, Sparkles, LayoutDashboard, Menu, X, ExternalLink, Clock, Zap } from 'lucide-react';
-import { NewsCategory } from '../types';
+import { Search, ShieldCheck, Radio, LayoutDashboard, Menu, X, Clock, Newspaper, FileText, CheckCircle2 } from 'lucide-react';
 
 interface HeaderProps {
   activeCategory: string;
@@ -44,7 +43,6 @@ export const Header: React.FC<HeaderProps> = ({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeBreakingIdx, setActiveBreakingIdx] = useState(0);
 
-
   // Live West Africa Time (WAT)
   useEffect(() => {
     const updateWatTime = () => {
@@ -77,33 +75,33 @@ export const Header: React.FC<HeaderProps> = ({
   }, [breakingStories]);
 
   return (
-    <header id="site-header" className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/90 shadow-xs">
-      {/* Top Meta Bar */}
-      <div id="top-utility-bar" className="bg-[#0F172A] text-slate-300 text-xs py-1.5 px-4 sm:px-6 border-b border-slate-800">
+    <header id="site-header" className="sticky top-0 z-40 bg-white/98 backdrop-blur-md border-b border-slate-200/90 shadow-xs">
+      {/* Top Meta Utility Bar */}
+      <div id="top-utility-bar" className="bg-[#0B132B] text-slate-300 text-xs py-2 px-4 sm:px-6 border-b border-slate-800">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1.5 text-emerald-400 font-bold tracking-wider text-[11px] uppercase">
               <span className="inline-block w-2 h-2 rounded-full bg-[#008751] animate-ping"></span>
-              LIVE DISPATCH
+              NATIONAL WIRE
             </span>
             <span className="text-slate-600 hidden sm:inline">|</span>
             <span className="flex items-center gap-1.5 text-slate-300 font-medium text-xs">
               <Clock className="w-3.5 h-3.5 text-slate-400" />
-              {currentTime || 'Loading Lagos WAT...'}
+              {currentTime || 'Lagos, Nigeria (WAT)'}
             </span>
             <span className="text-slate-600 hidden md:inline">|</span>
-            <span className="hidden md:inline text-slate-400 text-xs">
-              Monitoring Top 5: <strong className="text-slate-200 font-semibold">Channels TV • Punch • Premium Times • Vanguard • The Guardian</strong>
+            <span className="hidden md:inline text-slate-300 text-xs">
+              Verified Outlets: <strong className="text-white font-semibold">The Punch • Channels TV • Premium Times • Vanguard • The Guardian</strong>
             </span>
           </div>
 
           <div className="flex items-center gap-3">
             <button
-              onClick={() => onOpenPolicy('ai')}
+              onClick={() => onOpenPolicy('editorial')}
               className="text-slate-300 hover:text-emerald-400 transition-colors flex items-center gap-1.5 cursor-pointer text-xs font-medium"
             >
-              <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-              AI Editorial Disclosure
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              Editorial Standards & Verification
             </button>
             <span className="text-slate-700">|</span>
             <button
@@ -116,7 +114,7 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <LayoutDashboard className="w-3 h-3" />
-              {isAdminOpen ? 'Exit Newsroom' : 'Newsroom Admin'}
+              {isAdminOpen ? 'Exit Newsroom' : 'Newsroom Desk'}
             </button>
           </div>
         </div>
@@ -124,11 +122,11 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Breaking News Ticker Bar */}
       {breakingStories.length > 0 && (
-        <div id="breaking-ticker-bar" className="bg-red-700 text-white text-xs px-4 sm:px-6 py-1.5 overflow-hidden">
+        <div id="breaking-ticker-bar" className="bg-[#991B1B] text-white text-xs px-4 sm:px-6 py-2 overflow-hidden border-b border-red-900">
           <div className="max-w-7xl mx-auto flex items-center gap-3">
-            <div className="flex items-center gap-1.5 font-black tracking-wider uppercase shrink-0 bg-red-900 px-2 py-0.5 rounded text-[10px]">
-              <Radio className="w-3 h-3 animate-pulse" />
-              BREAKING
+            <div className="flex items-center gap-1.5 font-black tracking-wider uppercase shrink-0 bg-red-950 px-2 py-0.5 rounded text-[10px] border border-red-800">
+              <Radio className="w-3 h-3 animate-pulse text-red-300" />
+              BREAKING DISPATCH
             </div>
             <div className="flex-1 truncate">
               {breakingStories[activeBreakingIdx] && (
@@ -146,7 +144,7 @@ export const Header: React.FC<HeaderProps> = ({
       )}
 
       {/* Main Brand & Search Bar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
         <div className="flex items-center justify-between gap-4">
           {/* Logo */}
           <div className="flex items-center gap-3">
@@ -154,23 +152,22 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={() => onSelectCategory('All')}
               className="text-left group cursor-pointer focus:outline-hidden"
             >
-              <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-lg bg-[#008751] text-white flex items-center justify-center font-black text-xl shadow-xs border border-emerald-800">
-                  <span className="text-emerald-100">N</span>
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-lg bg-[#008751] text-white flex items-center justify-center font-black text-2xl shadow-sm border border-emerald-800">
+                  <span className="text-emerald-50 font-serif">N</span>
                 </div>
                 <div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xl sm:text-2xl font-black tracking-tight text-slate-950 font-serif">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950 font-serif">
                       Nigeria <span className="text-[#008751]">Daily</span>
                     </span>
-                    <span className="bg-emerald-50 text-[#008751] border border-emerald-300/80 text-[10px] font-bold px-1.5 py-0.2 rounded shadow-2xs">
-                      AI HUB
+                    <span className="bg-slate-900 text-slate-100 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">
+                      DISPATCH
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-500 hidden sm:block font-medium tracking-normal">
-                    Real-time AI Verification & Synthesis • Top 5 Nigerian Press
+                  <p className="text-[11px] text-slate-600 hidden sm:block font-medium tracking-normal mt-0.5">
+                    Verified Multi-Source Newsroom Intelligence • Top 5 Nigerian Press Wire
                   </p>
-
                 </div>
               </div>
             </button>
@@ -184,14 +181,14 @@ export const Header: React.FC<HeaderProps> = ({
                 type="text"
                 value={searchQuery}
                 onChange={e => onSearch(e.target.value)}
-                placeholder="Search Tinubu, CBN, Naira, Super Eagles, Tech..."
-                className="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 border border-slate-300/80 rounded-full focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-[#008751] focus:border-transparent transition-all placeholder:text-slate-400"
+                placeholder="Search National Assembly, CBN, Naira, Judiciary, Tech..."
+                className="w-full pl-9 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-[#008751] focus:border-transparent transition-all placeholder:text-slate-400"
               />
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
               {searchQuery && (
                 <button
                   onClick={() => onSearch('')}
-                  className="absolute right-3 top-2.5 text-xs text-slate-400 hover:text-slate-600 font-medium cursor-pointer"
+                  className="absolute right-3 top-3 text-xs text-slate-400 hover:text-slate-600 font-medium cursor-pointer"
                 >
                   Clear
                 </button>
@@ -199,23 +196,22 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* The Intelligence Brief AI Fast Button */}
+          {/* National Newsroom Desk / Wire Search Fast Action */}
           {onOpenGroqChat && (
             <button
               onClick={onOpenGroqChat}
-              className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-[#0F172A] hover:bg-slate-800 text-white rounded-full border border-emerald-500/40 text-xs font-semibold shadow-xs cursor-pointer hover:scale-[1.02] transition-transform"
-              title="Open The Intelligence Brief powered by Groq"
+              className="hidden lg:flex items-center gap-2 px-3.5 py-2 bg-[#0F172A] hover:bg-slate-800 text-white rounded-lg border border-slate-700 text-xs font-semibold shadow-xs cursor-pointer hover:border-emerald-500 transition-all"
+              title="Search verified Nigerian news archive"
             >
-              <Zap className="w-3.5 h-3.5 text-emerald-400" />
-              <span>The Intelligence Brief</span>
-              <span className="bg-orange-500/20 text-orange-300 text-[10px] font-mono font-bold px-1.5 py-0.2 rounded">
-                Groq
+              <Newspaper className="w-4 h-4 text-emerald-400" />
+              <span>National Wire Archive</span>
+              <span className="bg-emerald-950 text-emerald-300 text-[10px] font-bold px-1.5 py-0.2 rounded border border-emerald-700/50">
+                Verified
               </span>
             </button>
           )}
 
           {/* Mobile Menu Button */}
-
           <div className="flex items-center gap-2 md:hidden">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -228,7 +224,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Mobile Search Bar */}
-        <div className="mt-2.5 md:hidden">
+        <div className="mt-3 md:hidden">
           <div className="relative">
             <input
               type="text"
@@ -243,9 +239,9 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Category Navigation Bar */}
-      <nav id="category-navigation-bar" className="border-t border-slate-200/70 bg-slate-50/80 hidden md:block">
+      <nav id="category-navigation-bar" className="border-t border-slate-200/90 bg-slate-100/70 hidden md:block">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="flex items-center space-x-1 overflow-x-auto py-1 scrollbar-none">
+          <div className="flex items-center space-x-1 overflow-x-auto py-1.5 scrollbar-none">
             {CATEGORIES.map(cat => {
               const isActive = activeCategory === cat.value;
               return (
@@ -253,10 +249,10 @@ export const Header: React.FC<HeaderProps> = ({
                   key={cat.value}
                   id={`cat-nav-${cat.value.toLowerCase().replace(/[^a-z0-9]/g, '-')}`}
                   onClick={() => onSelectCategory(cat.value)}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-md whitespace-nowrap transition-colors cursor-pointer ${
+                  className={`px-3.5 py-1.5 text-xs font-bold rounded-md whitespace-nowrap transition-colors cursor-pointer ${
                     isActive
                       ? 'bg-[#008751] text-white shadow-xs'
-                      : 'text-slate-700 hover:text-slate-950 hover:bg-slate-200/70'
+                      : 'text-slate-700 hover:text-slate-950 hover:bg-slate-200/80'
                   }`}
                 >
                   {cat.label}
@@ -294,9 +290,10 @@ export const Header: React.FC<HeaderProps> = ({
                 onOpenPolicy('editorial');
                 setMobileMenuOpen(false);
               }}
-              className="text-[#008751] font-semibold"
+              className="text-[#008751] font-semibold flex items-center gap-1"
             >
-              Editorial Policy
+              <ShieldCheck className="w-3.5 h-3.5" />
+              Editorial Standards
             </button>
             <button
               onClick={() => {
@@ -305,7 +302,7 @@ export const Header: React.FC<HeaderProps> = ({
               }}
               className="bg-slate-900 text-white px-3 py-1 rounded font-semibold"
             >
-              Newsroom Dashboard
+              Newsroom Desk
             </button>
           </div>
         </div>

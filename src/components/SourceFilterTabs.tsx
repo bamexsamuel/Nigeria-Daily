@@ -1,6 +1,6 @@
 import React from 'react';
 import { NewsSource } from '../types';
-import { ShieldCheck, Layers } from 'lucide-react';
+import { ShieldCheck, Newspaper, Layers } from 'lucide-react';
 
 interface SourceFilterTabsProps {
   sources: NewsSource[];
@@ -22,11 +22,11 @@ export const SourceFilterTabs: React.FC<SourceFilterTabsProps> = ({
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-[#008751]" />
           <span className="text-xs font-bold uppercase tracking-wider text-slate-800">
-            Top 5 Nigerian Channels Verified Feed
+            Top 5 Nigerian Press & Wire Desks
           </span>
         </div>
         <span className="text-[11px] text-slate-500 font-medium">
-          Continuous RSS & AI verification from Nigeria's top newsrooms
+          Direct newsroom feeds: Channels TV • The Punch • Premium Times • Vanguard • The Guardian
         </span>
       </div>
 
@@ -41,7 +41,7 @@ export const SourceFilterTabs: React.FC<SourceFilterTabsProps> = ({
           }`}
         >
           <Layers className="w-3.5 h-3.5 text-slate-400" />
-          All Channels
+          All Sources
         </button>
 
         {topFive.map(source => {
@@ -63,7 +63,7 @@ export const SourceFilterTabs: React.FC<SourceFilterTabsProps> = ({
                   isSelected ? 'bg-emerald-900 text-emerald-100' : 'bg-emerald-50 text-[#008751] border border-emerald-200/60'
                 }`}
               >
-                {source.trustScore}% Trust
+                {source.trustScore}% Score
               </span>
             </button>
           );
