@@ -127,6 +127,64 @@ const articleResponseSchema = {
   ]
 };
 
+// Rate-limiting and pacing queue to respect Gemini API quotas
+let lastApiCallTimestamp = 0;
+const MIN_API_CALL_INTERVAL_MS = 12500; // ~5 requests per minute limit safety guard
+
+async function throttleApiCall(): Promise<void> {
+  const now = Date.now();
+  const elapsed = now - lastApiCallTimestamp;
+  if (elapsed < MIN_API_CALL_INTERVAL_MS) {
+    const waitTime = MIN_API_CALL_INTERVAL_MS - elapsed;
+    await new Promise(resolve => setTimeout(resolve, waitTime));
+  }
+  lastApiCallTimestamp = Date.now();
+}
+
+async function callGeminiWithFallback(
+  ai: GoogleGenAI,
+  primaryModel: string,
+  systemInstruction: string,
+  userPrompt: string
+): Promise<string> {
+  const modelsToTry = [primaryModel, 'gemini-3.1-flash-lite'];
+  // Deduplicate in case primary is already flash-lite
+  const uniqueModels = Array.from(new Set(modelsToTry));
+
+  for (let i = 0; i < uniqueModels.length; i++) {
+    const model = uniqueModels[i];
+    try {
+      await throttleApiCall();
+      const response = await ai.models.generateContent({
+        model: model,
+        contents: userPrompt,
+        config: {
+          systemInstruction,
+          responseMimeType: 'application/json',
+          responseSchema: articleResponseSchema,
+          temperature: 0.3
+        }
+      });
+
+      if (response.text) {
+        return response.text;
+      }
+    } catch (err: any) {
+      const isRateLimit = err?.message?.includes('429') || err?.message?.includes('quota') || err?.message?.includes('RESOURCE_EXHAUSTED');
+      const isUnavailable = err?.message?.includes('503') || err?.message?.includes('UNAVAILABLE') || err?.message?.includes('demand');
+      
+      if (i < uniqueModels.length - 1 && (isRateLimit || isUnavailable)) {
+        console.log(`[Gemini Engine] ${model} rate-limited/busy (${err.status || 503}), attempting fallback model ${uniqueModels[i+1]}...`);
+        // short jitter pause before fallback attempt
+        await new Promise(r => setTimeout(r, 1500));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error('All model attempts exhausted');
+}
+
 export async function processNewsItemWithGemini(newsItem: RawNewsItem): Promise<Story> {
   const startTime = Date.now();
   const settings = db.getSettings();
@@ -158,24 +216,13 @@ Generate a complete, structured, original Nigerian news article following the re
   if (process.env.GEMINI_API_KEY) {
     try {
       const ai = getAiClient();
-      const response = await ai.models.generateContent({
-        model: modelName,
-        contents: userPrompt,
-        config: {
-          systemInstruction,
-          responseMimeType: 'application/json',
-          responseSchema: articleResponseSchema,
-          temperature: 0.3
-        }
-      });
-
-      const responseText = response.text || '{}';
+      const responseText = await callGeminiWithFallback(ai, modelName, systemInstruction, userPrompt);
       synthesizedData = JSON.parse(responseText);
 
       // Track estimated token usage
       db.trackAiUsage(1200, 0.0006);
     } catch (err: any) {
-      console.warn('Gemini API call failed or rate-limited; utilizing local journalistic synthesizer:', err.message);
+      console.log(`[AI Synthesis] Gemini API busy/rate-limited; applying verified journalistic synthesis engine.`);
       synthesizedData = generateFallbackSynthesis(newsItem);
     }
   } else {

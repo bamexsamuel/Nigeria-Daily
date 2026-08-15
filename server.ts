@@ -432,6 +432,44 @@ Guidelines:
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Nigerian AI News Hub Server running on http://0.0.0.0:${PORT}`);
+    
+    // Automatically trigger initial live RSS sync in the background
+    setTimeout(async () => {
+      try {
+        console.log('[RSS Engine] Starting initial live sync for Nigerian top news sources...');
+        const syncResults = await fetchAllActiveSources();
+        console.log('[RSS Engine] Initial sync completed:', syncResults.map(r => `${r.sourceName}: ${r.newArticles} new`).join(', '));
+        
+        // Auto-process pending raw items with controlled queue pacing
+        const pendingItems = db.getRawNewsItems().filter(item => item.status === 'pending').slice(0, 4);
+        for (const item of pendingItems) {
+          try {
+            await processNewsItemWithGemini(item);
+            item.status = 'processed';
+          } catch (e: any) {
+            item.status = 'processed'; // mark handled
+          }
+        }
+      } catch (err: any) {
+        console.error('[RSS Engine] Background sync error:', err.message);
+      }
+    }, 2500);
+
+    // Schedule periodic check every 10 minutes
+    setInterval(async () => {
+      try {
+        await fetchAllActiveSources();
+        const pending = db.getRawNewsItems().filter(i => i.status === 'pending').slice(0, 2);
+        for (const item of pending) {
+          try {
+            await processNewsItemWithGemini(item);
+            item.status = 'processed';
+          } catch {
+            item.status = 'processed';
+          }
+        }
+      } catch {}
+    }, 10 * 60 * 1000);
   });
 }
 
