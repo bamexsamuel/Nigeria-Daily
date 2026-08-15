@@ -3,6 +3,7 @@ import {
   Story, NewsSource, RawNewsItem, NewsroomStats, SystemSettings 
 } from './types';
 import { api } from './services/api';
+import { SEED_STORIES, TOP_FIVE_NIGERIAN_SOURCES, INITIAL_SETTINGS } from './data/seedData';
 import { Header } from './components/Header';
 import { SourceFilterTabs } from './components/SourceFilterTabs';
 import { HeroLead } from './components/HeroLead';
@@ -20,14 +21,15 @@ import {
 } from 'lucide-react';
 
 export default function App() {
-  // State
-  const [stories, setStories] = useState<Story[]>([]);
-  const [sources, setSources] = useState<NewsSource[]>([]);
+  // State - seeded with initial news so content displays instantly
+  const [stories, setStories] = useState<Story[]>(SEED_STORIES);
+  const [sources, setSources] = useState<NewsSource[]>(TOP_FIVE_NIGERIAN_SOURCES);
   const [rawQueue, setRawQueue] = useState<RawNewsItem[]>([]);
   const [stats, setStats] = useState<NewsroomStats | null>(null);
-  const [settings, setSettings] = useState<SystemSettings | null>(null);
+  const [settings, setSettings] = useState<SystemSettings>(INITIAL_SETTINGS);
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Filters & Navigation
@@ -44,12 +46,12 @@ export default function App() {
   const [isGroqChatOpen, setIsGroqChatOpen] = useState(false);
   const [groqChatQuery, setGroqChatQuery] = useState('');
 
-
-  // Load initial data
+  // Resilient data loading from API
   const loadData = async () => {
+    setIsRefreshing(true);
     try {
       setError(null);
-      const [storiesData, sourcesData, rawData, statsData, settingsData] = await Promise.all([
+      const [storiesData, sourcesData, rawData, statsData, settingsData] = await Promise.allSettled([
         api.getStories(),
         api.getSources(),
         api.getRawQueue(),
@@ -57,15 +59,25 @@ export default function App() {
         api.getSettings()
       ]);
 
-      setStories(storiesData);
-      setSources(sourcesData);
-      setRawQueue(rawData);
-      setStats(statsData);
-      setSettings(settingsData);
+      if (storiesData.status === 'fulfilled' && storiesData.value && storiesData.value.length > 0) {
+        setStories(storiesData.value);
+      }
+      if (sourcesData.status === 'fulfilled' && sourcesData.value && sourcesData.value.length > 0) {
+        setSources(sourcesData.value);
+      }
+      if (rawData.status === 'fulfilled' && rawData.value) {
+        setRawQueue(rawData.value);
+      }
+      if (statsData.status === 'fulfilled' && statsData.value) {
+        setStats(statsData.value);
+      }
+      if (settingsData.status === 'fulfilled' && settingsData.value) {
+        setSettings(settingsData.value);
+      }
     } catch (err: any) {
-      console.error('Failed to fetch data', err);
-      setError(err.message || 'Failed to load Nigerian news hub data.');
+      console.error('Failed to refresh data', err);
     } finally {
+      setIsRefreshing(false);
       setLoading(false);
     }
   };
@@ -75,7 +87,9 @@ export default function App() {
 
     // Auto poll every 45s for fresh Nigerian news updates
     const interval = setInterval(() => {
-      api.getStories().then(setStories).catch(() => {});
+      api.getStories().then(res => {
+        if (res && res.length > 0) setStories(res);
+      }).catch(() => {});
       api.getStats().then(setStats).catch(() => {});
     }, 45000);
 
@@ -90,12 +104,17 @@ export default function App() {
   const filteredStories = useMemo(() => {
     return publishedStories.filter(story => {
       // Category filter
-      if (selectedCategory !== 'All' && story.category !== selectedCategory) {
+      if (selectedCategory !== 'All' && story.category.toLowerCase() !== selectedCategory.toLowerCase()) {
         return false;
       }
       // Top 5 Source filter
-      if (selectedSourceId && story.primarySourceId !== selectedSourceId) {
-        return false;
+      if (selectedSourceId) {
+        const targetSource = sources.find(s => s.id === selectedSourceId);
+        const matchesId = story.sources?.some(s => s.sourceId === selectedSourceId);
+        const matchesName = targetSource && story.primarySourceName.toLowerCase().includes(targetSource.name.toLowerCase());
+        if (!matchesId && !matchesName) {
+          return false;
+        }
       }
       // Search query
       if (searchQuery.trim()) {
@@ -108,7 +127,7 @@ export default function App() {
       }
       return true;
     });
-  }, [publishedStories, selectedCategory, selectedSourceId, searchQuery]);
+  }, [publishedStories, selectedCategory, selectedSourceId, searchQuery, sources]);
 
   // Breaking stories for top ticker
   const breakingStories = useMemo(() => {
