@@ -147,9 +147,12 @@ async function callGeminiWithFallback(
   systemInstruction: string,
   userPrompt: string
 ): Promise<string> {
-  const modelsToTry = [primaryModel, 'gemini-3.1-flash-lite'];
-  // Deduplicate in case primary is already flash-lite
-  const uniqueModels = Array.from(new Set(modelsToTry));
+  // Ordered models to try: requested model, fast 2.5 flash, and 3.1 flash lite
+  const modelsToTry = [primaryModel, 'gemini-2.5-flash', 'gemini-3.1-flash-lite'];
+  // Deduplicate
+  const uniqueModels = Array.from(new Set(modelsToTry.filter(Boolean)));
+
+  let lastError: any = null;
 
   for (let i = 0; i < uniqueModels.length; i++) {
     const model = uniqueModels[i];
@@ -170,19 +173,20 @@ async function callGeminiWithFallback(
         return response.text;
       }
     } catch (err: any) {
-      const isRateLimit = err?.message?.includes('429') || err?.message?.includes('quota') || err?.message?.includes('RESOURCE_EXHAUSTED');
-      const isUnavailable = err?.message?.includes('503') || err?.message?.includes('UNAVAILABLE') || err?.message?.includes('demand');
+      lastError = err;
+      const errMsg = String(err?.message || '').toLowerCase();
+      const isRateOrQuota = errMsg.includes('429') || errMsg.includes('quota') || errMsg.includes('resource_exhausted') || errMsg.includes('exhausted') || errMsg.includes('rate');
+      const isUnavailable = errMsg.includes('503') || errMsg.includes('unavailable') || errMsg.includes('overloaded') || errMsg.includes('demand');
       
-      if (i < uniqueModels.length - 1 && (isRateLimit || isUnavailable)) {
-        console.log(`[Gemini Engine] ${model} rate-limited/busy (${err.status || 503}), attempting fallback model ${uniqueModels[i+1]}...`);
-        // short jitter pause before fallback attempt
-        await new Promise(r => setTimeout(r, 1500));
+      if (i < uniqueModels.length - 1 && (isRateOrQuota || isUnavailable)) {
+        console.log(`[Gemini Engine] ${model} quota/busy, attempting fallback to ${uniqueModels[i+1]}...`);
+        // Jitter pause before next model
+        await new Promise(r => setTimeout(r, 1200));
         continue;
       }
-      throw err;
     }
   }
-  throw new Error('All model attempts exhausted');
+  throw lastError || new Error('All model attempts exhausted');
 }
 
 export async function processNewsItemWithGemini(newsItem: RawNewsItem): Promise<Story> {
