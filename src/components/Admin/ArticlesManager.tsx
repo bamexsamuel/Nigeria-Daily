@@ -6,6 +6,7 @@ import {
   RotateCcw, ShieldAlert, CheckSquare, Square
 } from 'lucide-react';
 import { api } from '../../services/api';
+import { getSafeSourceUrl } from '../../utils/sourceUrl';
 
 interface ArticlesManagerProps {
   stories: Story[];
@@ -339,7 +340,7 @@ export const ArticlesManager: React.FC<ArticlesManagerProps> = ({
                           {story.primarySourceName}
                         </div>
                         <a
-                          href={story.primarySourceUrl}
+                          href={getSafeSourceUrl(story)}
                           target="_blank"
                           rel="noreferrer"
                           className="text-[10px] text-[#008751] hover:underline flex items-center gap-0.5 mt-0.5 font-medium"

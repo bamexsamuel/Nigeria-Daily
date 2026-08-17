@@ -101,6 +101,28 @@ function AppContent() {
     return () => clearInterval(interval);
   }, []);
 
+  const handleSyncLiveWire = async () => {
+    setIsRefreshing(true);
+    try {
+      await api.syncAllSources();
+      const updatedStories = await api.getStories();
+      setStories(updatedStories);
+      const updatedStats = await api.getStats();
+      setStats(updatedStats);
+    } catch (err) {
+      console.error('Sync failed', err);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const handleRemoveStory = (storyId: string) => {
+    setStories(prev => prev.filter(s => s.id !== storyId));
+    if (selectedStory?.id === storyId) {
+      setSelectedStory(null);
+    }
+  };
+
   // Filtered stories for public display (only published stories)
   const publishedStories = useMemo(() => {
     return stories.filter(s => s.status === 'published');
@@ -226,6 +248,8 @@ function AppContent() {
           setGroqChatQuery('');
           setIsGroqChatOpen(true);
         }}
+        onSyncLiveWire={handleSyncLiveWire}
+        isRefreshing={isRefreshing}
       />
 
       {/* Main Content Area */}
@@ -431,6 +455,7 @@ function AppContent() {
           onSelectRelatedStory={handleSelectStory}
           allStories={publishedStories}
           onStoryUpdated={loadData}
+          onStoryRemoved={handleRemoveStory}
         />
       )}
 

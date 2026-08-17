@@ -1,4 +1,4 @@
-import { NewsSource, Story, SystemSettings } from '../types';
+import { NewsSource, Story, SystemSettings, NewsroomStats } from '../types';
 
 const imgCbn = '/src/assets/images/nigeria_economy_cbn_1786796895498.jpg';
 const imgLagosAi = '/src/assets/images/lagos_ai_tech_hub_1786796913963.jpg';
@@ -89,6 +89,28 @@ export const TOP_FIVE_NIGERIAN_SOURCES: NewsSource[] = [
     totalArticlesCount: 980
   }
 ];
+
+export const SEED_SOURCES: NewsSource[] = TOP_FIVE_NIGERIAN_SOURCES;
+
+export const INITIAL_STATS: NewsroomStats = {
+  todayArticlesCount: 48,
+  pendingReviewCount: 2,
+  sourcesOnlineCount: 5,
+  totalSourcesCount: 5,
+  articlesPublishedCount: 46,
+  articlesFailedCount: 0,
+  duplicateBlockedCount: 19,
+  estimatedTokensUsed: 142000,
+  aiCostEstimateUsd: 0.14,
+  topCategories: [
+    { category: 'Politics', count: 18 },
+    { category: 'Business', count: 12 },
+    { category: 'Technology', count: 8 },
+    { category: 'Crime & Security', count: 6 },
+    { category: 'Sports', count: 4 }
+  ],
+  recentJobs: []
+};
 
 export const INITIAL_SETTINGS: SystemSettings = {
   websiteName: 'Nigerian AI News Hub',

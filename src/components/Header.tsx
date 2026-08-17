@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Search, ShieldCheck, Radio, LayoutDashboard, Menu, X, Clock, 
-  Newspaper, FileText, CheckCircle2, Lock, UserCheck, LogOut
+  Newspaper, FileText, CheckCircle2, Lock, UserCheck, LogOut, RefreshCw
 } from 'lucide-react';
 import { useAdminAuth } from '../context/AuthContext';
 
@@ -16,6 +16,8 @@ interface HeaderProps {
   onSelectStoryById?: (id: string) => void;
   breakingStories?: Array<{ id: string; headline: string; category: string }>;
   onOpenGroqChat?: () => void;
+  onSyncLiveWire?: () => void;
+  isRefreshing?: boolean;
 }
 
 const CATEGORIES: { label: string; value: string }[] = [
@@ -41,7 +43,9 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenPolicy,
   onSelectStoryById,
   breakingStories = [],
-  onOpenGroqChat
+  onOpenGroqChat,
+  onSyncLiveWire,
+  isRefreshing = false
 }) => {
   const { isAuthenticated, user, logout } = useAdminAuth();
   const [currentTime, setCurrentTime] = useState<string>('');
@@ -247,8 +251,8 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Category Navigation Bar */}
       <nav id="category-navigation-bar" className="bg-slate-50 border-t border-slate-200/80">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="flex items-center space-x-1 overflow-x-auto py-2 scrollbar-none">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between gap-2">
+          <div className="flex items-center space-x-1 overflow-x-auto py-2 scrollbar-none flex-1">
             {CATEGORIES.map(cat => {
               const isSelected = activeCategory === cat.value;
               return (
@@ -267,6 +271,19 @@ export const Header: React.FC<HeaderProps> = ({
               );
             })}
           </div>
+
+          {onSyncLiveWire && (
+            <button
+              id="sync-live-wire-header-btn"
+              onClick={onSyncLiveWire}
+              disabled={isRefreshing}
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-[#008751] font-bold text-xs rounded-lg border border-emerald-300 transition-all cursor-pointer shrink-0 shadow-2xs disabled:opacity-50"
+              title="Fetch fresh real-time RSS news from top Nigerian press agencies"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <span>{isRefreshing ? 'Syncing Wire...' : 'Sync Live Wire'}</span>
+            </button>
+          )}
         </div>
       </nav>
 

@@ -3,11 +3,12 @@ import { Story } from '../types';
 import { 
   X, Clock, ExternalLink, ShieldCheck, Share2, 
   Check, Tag, ArrowLeft, Bookmark, CheckCircle2, Newspaper,
-  ShieldAlert, Trash2, RotateCcw
+  ShieldAlert, Trash2, RotateCcw, AlertTriangle, CheckSquare
 } from 'lucide-react';
 import { AdSlot } from './AdSlot';
 import { useAdminAuth } from '../context/AuthContext';
 import { api } from '../services/api';
+import { getSafeSourceUrl } from '../utils/sourceUrl';
 
 interface ArticleDetailModalProps {
   story: Story;
@@ -15,6 +16,7 @@ interface ArticleDetailModalProps {
   onSelectRelatedStory: (story: Story) => void;
   allStories: Story[];
   onStoryUpdated?: () => void;
+  onStoryRemoved?: (storyId: string) => void;
 }
 
 export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
@@ -22,7 +24,8 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
   onClose,
   onSelectRelatedStory,
   allStories,
-  onStoryUpdated
+  onStoryUpdated,
+  onStoryRemoved
 }) => {
   const { isAuthenticated, user } = useAdminAuth();
   const [copied, setCopied] = useState(false);
@@ -31,6 +34,8 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
   const [removalReason, setRemovalReason] = useState('Not expected on this blog / Off-topic');
   const [customReason, setCustomReason] = useState('');
   const [isRemoving, setIsRemoving] = useState(false);
+  const [permanentDelete, setPermanentDelete] = useState(false);
+  const [removalSuccess, setRemovalSuccess] = useState(false);
 
   const formatFullDate = (dateStr: string) => {
     const d = new Date(dateStr);
@@ -69,23 +74,37 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
     const finalReason = removalReason === 'Custom Reason' ? (customReason || 'Editorial discretion') : removalReason;
 
     try {
-      await api.updateStory(story.id, {
-        status: 'rejected',
-        requiresReview: false,
-        reviewReason: `Removed by ${user?.name || 'Editor'}: ${finalReason}`
-      });
-      setShowRemoveDialog(false);
+      if (permanentDelete) {
+        await api.deleteStory(story.id);
+      } else {
+        await api.updateStory(story.id, {
+          status: 'rejected',
+          requiresReview: false,
+          reviewReason: `Removed by ${user?.name || 'Editor'}: ${finalReason}`
+        });
+      }
+      setRemovalSuccess(true);
+      onStoryRemoved?.(story.id);
       onStoryUpdated?.();
-      onClose();
+      
+      setTimeout(() => {
+        setShowRemoveDialog(false);
+        onClose();
+      }, 700);
     } catch (err) {
       console.error('Failed to remove story', err);
+      // Even on network error, ensure local state removes it
+      onStoryRemoved?.(story.id);
+      onClose();
     } finally {
       setIsRemoving(false);
     }
   };
 
+  const safePrimaryUrl = getSafeSourceUrl(story);
+
   const related = allStories
-    .filter(s => s.id !== story.id && (s.category === story.category || s.primarySourceName === story.primarySourceName))
+    .filter(s => s.id !== story.id && s.status === 'published' && (s.category === story.category || s.primarySourceName === story.primarySourceName))
     .slice(0, 3);
 
   return (
@@ -98,102 +117,70 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
         <div className="sticky top-0 z-20 bg-white/98 backdrop-blur-md border-b border-slate-200/90 px-4 sm:px-6 py-3 flex items-center justify-between">
           <button
             onClick={onClose}
-            className="flex items-center gap-1.5 text-xs font-bold text-slate-700 hover:text-[#008751] transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 text-xs font-bold text-slate-700 hover:text-[#008751] transition-colors cursor-pointer py-1.5 px-2 rounded-lg hover:bg-slate-100"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back to Wire Feed
+            <span>Back to Wire</span>
           </button>
 
           <div className="flex items-center gap-2">
-            {/* Editor Quick Action Button if Logged In */}
             {isAuthenticated && (
               <button
+                id="modal-editorial-remove-btn"
                 onClick={() => setShowRemoveDialog(true)}
-                className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs mr-2"
-                title="Remove this post from public blog"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-[#991B1B] font-bold text-xs rounded-lg border border-red-200 transition-all cursor-pointer shadow-xs"
+                title="Remove this post from public live blog"
               >
-                <ShieldAlert className="w-3.5 h-3.5 text-red-600" />
-                <span>Remove From Blog</span>
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Remove from Blog</span>
               </button>
             )}
 
             <button
               onClick={() => setSaved(!saved)}
-              className={`p-2 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer ${
-                saved ? 'bg-emerald-50 text-[#008751] border border-emerald-300' : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200'
+              className={`p-2 rounded-lg transition-colors cursor-pointer ${
+                saved ? 'bg-emerald-50 text-[#008751]' : 'text-slate-500 hover:bg-slate-100'
               }`}
               title="Bookmark story"
             >
-              <Bookmark className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">{saved ? 'Saved' : 'Save'}</span>
-            </button>
-
-            <button
-              onClick={() => handleShare('whatsapp')}
-              className="p-2 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-semibold flex items-center gap-1 cursor-pointer"
-              title="Share to WhatsApp"
-            >
-              <Share2 className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">WhatsApp</span>
+              <Bookmark className="w-4 h-4" />
             </button>
 
             <button
               onClick={() => handleShare('copy')}
-              className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-1 cursor-pointer"
-              title="Copy link"
+              className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer relative"
+              title="Copy share link"
             >
-              {copied ? <Check className="w-3.5 h-3.5 text-[#008751]" /> : <ExternalLink className="w-3.5 h-3.5" />}
-              <span className="hidden sm:inline">{copied ? 'Copied' : 'Link'}</span>
+              {copied ? <Check className="w-4 h-4 text-[#008751]" /> : <Share2 className="w-4 h-4" />}
             </button>
-
-            <div className="h-4 w-px bg-slate-300 mx-1"></div>
 
             <button
               onClick={onClose}
-              className="p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+              className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        {/* Admin Editorial Moderation Banner if Logged In */}
-        {isAuthenticated && (
-          <div className="bg-slate-900 text-white px-4 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 text-xs">
-            <div className="flex items-center gap-2">
-              <span className="bg-[#008751] text-white font-bold text-[10px] px-1.5 py-0.2 rounded uppercase">
-                ADMIN MODERATION ACTIVE
-              </span>
-              <span className="text-slate-300">
-                Confidence: <strong className="text-emerald-400 font-mono">{story.confidenceScore}%</strong> • Status: <strong>{story.status}</strong>
-              </span>
-            </div>
-            <button
-              onClick={() => setShowRemoveDialog(true)}
-              className="text-red-300 hover:text-white bg-red-950/70 hover:bg-red-900 px-2.5 py-1 rounded font-semibold flex items-center gap-1 cursor-pointer border border-red-800"
-            >
-              <Trash2 className="w-3 h-3" />
-              Take Down Unexpected Post
-            </button>
-          </div>
-        )}
-
-        {/* Modal Scrollable Article Body */}
-        <div className="p-4 sm:p-8 md:p-10 max-h-[85vh] overflow-y-auto">
-          {/* Header Metadata */}
-          <div className="mb-4 flex flex-wrap items-center gap-2">
-            <span className="bg-[#008751] text-white text-xs font-bold uppercase px-3 py-1 rounded-md shadow-xs">
+        {/* Content Body */}
+        <div className="p-4 sm:p-6 md:p-8 overflow-y-auto max-h-[85vh]">
+          {/* Category & Verified Live Badge */}
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            <span className="bg-[#0F172A] text-white font-mono text-xs font-bold px-3 py-1 rounded-md uppercase tracking-wider">
               {story.category}
             </span>
+
             {story.isBreaking && (
-              <span className="bg-[#991B1B] text-white text-xs font-bold uppercase px-3 py-1 rounded-md animate-pulse shadow-xs">
-                Breaking Dispatch
+              <span className="bg-[#991B1B] text-white text-xs font-black px-2.5 py-1 rounded-md uppercase tracking-wider animate-pulse">
+                Breaking News
               </span>
             )}
-            <span className="text-slate-500 text-xs flex items-center gap-1 font-medium">
+
+            <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium ml-auto">
               <Clock className="w-3.5 h-3.5 text-slate-400" />
-              Dispatched: {formatFullDate(story.publishedAt)}
-            </span>
+              <span>{formatFullDate(story.publishedAt)}</span>
+            </div>
           </div>
 
           {/* Headline */}
@@ -229,7 +216,7 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
             </div>
           </div>
 
-          {/* MANDATORY SOURCE ATTRIBUTION CALLOUT BANNER */}
+          {/* MANDATORY SOURCE ATTRIBUTION CALLOUT BANNER (SAFE URL TO PREVENT 404) */}
           <div 
             id="mandatory-source-attribution" 
             className="bg-emerald-50/95 border border-emerald-300 rounded-xl p-4 mb-6 shadow-xs"
@@ -241,7 +228,7 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
                   <p className="text-xs text-emerald-950 font-bold">
                     Original Source Reporting: <strong className="text-[#008751] font-black">{story.primarySourceName}</strong>
                   </p>
-                  {story.sources.length > 1 && (
+                  {story.sources && story.sources.length > 1 && (
                     <p className="text-[11px] text-emerald-850 font-medium mt-0.5">
                       Corroborated across: {story.sources.map(s => s.sourceName).join(', ')}
                     </p>
@@ -250,7 +237,7 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
               </div>
 
               <a
-                href={story.primarySourceUrl}
+                href={safePrimaryUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 bg-[#008751] hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-2 rounded-lg transition-all shadow-xs cursor-pointer shrink-0"
@@ -269,6 +256,12 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
               referrerPolicy="no-referrer"
               className="w-full h-full object-cover"
             />
+            {story.imageCaption && (
+              <div className="absolute bottom-0 inset-x-0 bg-linear-to-t from-black/80 via-black/40 to-transparent p-3 text-white text-[11px]">
+                <span>{story.imageCaption}</span>
+                {story.imageCredit && <span className="opacity-75 ml-2">• Photo: {story.imageCredit}</span>}
+              </div>
+            )}
           </div>
 
           {/* Key Facts / Intelligence Bullets */}
@@ -291,112 +284,157 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
             </div>
           )}
 
-          {/* Full Synthesized Narrative */}
-          <div className="prose prose-slate max-w-none mb-8 text-slate-900 text-sm leading-relaxed font-serif space-y-4">
-            {story.article.split('\n\n').map((para, i) => (
-              <p key={i} className="leading-relaxed">
-                {para}
-              </p>
-            ))}
-          </div>
+          {/* Structured Journalistic Breakdown */}
+          {story.whatHappened && (
+            <div className="space-y-6 mb-8 text-slate-800">
+              <div className="border-b border-slate-200 pb-5">
+                <h3 className="text-sm font-black font-serif uppercase tracking-wider text-slate-900 mb-2 flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-sm bg-[#0F172A]"></span>
+                  What Happened
+                </h3>
+                <p className="text-sm leading-relaxed text-slate-700 font-sans">
+                  {story.whatHappened}
+                </p>
+              </div>
 
-          {/* Mid-Article In-Feed Ad Slot */}
-          <div className="my-8">
-            <AdSlot format="banner" label="Editorial Partner Placement" />
-          </div>
-
-          {/* Multi-Source Corroboration Transparency Box */}
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-8">
-            <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-200">
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-[#008751]" />
-                Direct Source Outlets & Original Coverage
-              </h3>
-              <span className="text-[11px] font-mono text-[#008751] font-bold">
-                {story.confidenceScore}% Fact Accuracy
-              </span>
-            </div>
-
-            <div className="space-y-2">
-              {story.sources.map((src, i) => (
-                <div key={i} className="flex items-center justify-between text-xs p-2.5 bg-white rounded-lg border border-slate-200/80">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-[#008751]"></span>
-                    <span className="font-bold text-slate-900">{src.sourceName}</span>
-                    <span className="text-slate-400">({src.category})</span>
+              {story.mainStory && (
+                <div className="border-b border-slate-200 pb-5">
+                  <h3 className="text-sm font-black font-serif uppercase tracking-wider text-slate-900 mb-2 flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-sm bg-[#008751]"></span>
+                    Full Narrative Report
+                  </h3>
+                  <div className="text-sm leading-relaxed text-slate-700 font-sans space-y-3 whitespace-pre-line">
+                    {story.mainStory}
                   </div>
-                  <a
-                    href={src.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-[#008751] font-bold hover:underline flex items-center gap-1"
-                  >
-                    View Source Report <ExternalLink className="w-3 h-3" />
-                  </a>
                 </div>
-              ))}
-            </div>
-          </div>
+              )}
 
-          {/* Tags */}
-          {story.tags && story.tags.length > 0 && (
-            <div className="mb-8 flex flex-wrap items-center gap-1.5">
-              <Tag className="w-3.5 h-3.5 text-slate-400 mr-1" />
-              {story.tags.map(t => (
-                <span
-                  key={t}
-                  className="bg-slate-100 text-slate-700 text-xs px-2.5 py-1 rounded-md font-semibold"
-                >
-                  #{t}
-                </span>
-              ))}
+              {story.background && (
+                <div className="border-b border-slate-200 pb-5">
+                  <h3 className="text-sm font-black font-serif uppercase tracking-wider text-slate-900 mb-2 flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-sm bg-amber-600"></span>
+                    Background Context
+                  </h3>
+                  <p className="text-sm leading-relaxed text-slate-700 font-sans">
+                    {story.background}
+                  </p>
+                </div>
+              )}
+
+              {story.whatHappensNext && (
+                <div className="bg-emerald-50/60 rounded-xl p-4 border border-emerald-200">
+                  <h3 className="text-sm font-black font-serif uppercase tracking-wider text-emerald-950 mb-1 flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#008751]"></span>
+                    What Happens Next
+                  </h3>
+                  <p className="text-sm leading-relaxed text-emerald-900 font-sans">
+                    {story.whatHappensNext}
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
-          {/* Editorial Transparency & Integrity Note */}
-          <div className="bg-[#0F172A] text-slate-300 rounded-xl p-4 mb-8 text-xs border border-slate-800 shadow-xs">
-            <div className="flex items-start gap-2.5">
-              <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-              <div>
-                <strong className="text-white block mb-1">Editorial Transparency & Multi-Source Verification Note:</strong>
-                <p className="text-slate-400 leading-relaxed">
-                  This report has been curated and verified from primary news coverage published by <strong>{story.primarySourceName}</strong>. 
-                  Our editorial system cross-references multiple Nigerian news outlets, verifies dates and official statistics, and provides direct links to original reporting.
-                </p>
-              </div>
+          {/* In-Article Advertisement Slot */}
+          <div className="my-8">
+            <AdSlot type="in-article" />
+          </div>
+
+          {/* Verified Corroborating Sources Links */}
+          <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 mb-8">
+            <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+              Verified Direct Source References:
+            </h4>
+            <div className="space-y-2">
+              {story.sources && story.sources.length > 0 ? (
+                story.sources.map((src, i) => {
+                  const safeSrcUrl = getSafeSourceUrl({ primarySourceUrl: src.sourceUrl, primarySourceName: src.sourceName });
+                  return (
+                    <div key={i} className="flex items-center justify-between text-xs py-1.5 px-2 bg-white rounded-lg border border-slate-200">
+                      <span className="font-semibold text-slate-800">{src.sourceName}</span>
+                      <a
+                        href={safeSrcUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#008751] hover:underline font-bold flex items-center gap-1"
+                      >
+                        <span>View Source Report</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="flex items-center justify-between text-xs py-1.5 px-2 bg-white rounded-lg border border-slate-200">
+                  <span className="font-semibold text-slate-800">{story.primarySourceName}</span>
+                  <a
+                    href={safePrimaryUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[#008751] hover:underline font-bold flex items-center gap-1"
+                  >
+                    <span>View Source Report</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Social Share Bar */}
+          <div className="border-t border-b border-slate-200 py-4 mb-8 flex flex-wrap items-center justify-between gap-3">
+            <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+              Share this Verified Report:
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleShare('whatsapp')}
+                className="px-3 py-1.5 bg-[#25D366] hover:bg-[#20ba5a] text-white text-xs font-bold rounded-lg transition-colors cursor-pointer shadow-xs"
+              >
+                WhatsApp
+              </button>
+              <button
+                onClick={() => handleShare('x')}
+                className="px-3 py-1.5 bg-black hover:bg-slate-800 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer shadow-xs"
+              >
+                X (Twitter)
+              </button>
+              <button
+                onClick={() => handleShare('facebook')}
+                className="px-3 py-1.5 bg-[#1877F2] hover:bg-[#166fe5] text-white text-xs font-bold rounded-lg transition-colors cursor-pointer shadow-xs"
+              >
+                Facebook
+              </button>
+              <button
+                onClick={() => handleShare('copy')}
+                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-lg transition-colors cursor-pointer border border-slate-300"
+              >
+                {copied ? 'Copied Link!' : 'Copy Link'}
+              </button>
             </div>
           </div>
 
           {/* Related Stories */}
           {related.length > 0 && (
-            <div className="pt-6 border-t border-slate-200">
-              <h3 className="text-xs font-black uppercase tracking-wider text-slate-900 mb-4">
-                Related Nigerian Stories
+            <div>
+              <h3 className="text-sm font-black font-serif uppercase tracking-wider text-slate-900 mb-4 flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-sm bg-[#008751]"></span>
+                Related News Wire Reports
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {related.map(r => (
                   <div
                     key={r.id}
                     onClick={() => onSelectRelatedStory(r)}
-                    className="group bg-slate-50 border border-slate-200 rounded-xl p-3 hover:border-[#008751] hover:bg-white transition-all cursor-pointer flex flex-col justify-between"
+                    className="p-3 bg-slate-50 hover:bg-emerald-50/50 rounded-xl border border-slate-200 transition-all cursor-pointer group"
                   >
-                    <div>
-                      <div className="aspect-16/10 rounded-lg overflow-hidden bg-slate-900 mb-2">
-                        <img
-                          src={r.image}
-                          alt={r.headline}
-                          referrerPolicy="no-referrer"
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                        />
-                      </div>
-                      <span className="text-[10px] font-bold text-[#008751] uppercase block mb-1">
-                        {r.category}
-                      </span>
-                      <h4 className="text-xs font-bold text-slate-900 font-serif leading-snug group-hover:text-[#008751] line-clamp-2">
-                        {r.headline}
-                      </h4>
-                    </div>
-                    <span className="text-[10px] text-slate-400 mt-2 block font-medium">
+                    <span className="text-[10px] font-bold font-mono text-[#008751] uppercase">
+                      {r.category}
+                    </span>
+                    <h4 className="text-xs font-bold font-serif text-slate-900 group-hover:text-[#008751] line-clamp-2 mt-1 mb-2">
+                      {r.headline}
+                    </h4>
+                    <span className="text-[10px] text-slate-500">
                       via {r.primarySourceName}
                     </span>
                   </div>
@@ -409,7 +447,7 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
 
       {/* Takedown Confirmation Modal */}
       {showRemoveDialog && (
-        <div className="fixed inset-0 z-60 overflow-y-auto bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-60 overflow-y-auto bg-slate-950/85 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
             <div className="bg-[#991B1B] text-white p-5 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -427,76 +465,95 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
             </div>
 
             <div className="p-5 space-y-4 text-xs">
-              <p className="text-slate-600">
-                This will immediately remove <strong>"{story.headline}"</strong> from the public feed and archive it in the Newsroom Analysis Audit tab.
-              </p>
+              {removalSuccess ? (
+                <div className="p-4 bg-emerald-50 border border-emerald-300 rounded-xl text-center text-emerald-900 font-bold">
+                  <CheckCircle2 className="w-8 h-8 text-[#008751] mx-auto mb-2" />
+                  Article successfully removed from public live blog.
+                </div>
+              ) : (
+                <>
+                  <p className="text-slate-600 leading-relaxed">
+                    This will immediately take down <strong>"{story.headline}"</strong> from the public live website and archive it with your removal reason.
+                  </p>
 
-              <div>
-                <label className="block font-bold text-slate-700 uppercase tracking-wider mb-2">
-                  Select Reason:
-                </label>
-                <div className="space-y-2">
-                  {[
-                    'Not expected on this blog / Off-topic',
-                    'Unverified or inaccurate claims',
-                    'Duplicate or redundant coverage',
-                    'Editorial discretion / Retraction',
-                    'Sensationalized or uncorroborated headline',
-                    'Custom Reason'
-                  ].map(r => (
-                    <label
-                      key={r}
-                      className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer ${
-                        removalReason === r
-                          ? 'border-red-600 bg-red-50 text-red-950 font-bold'
-                          : 'border-slate-200 hover:bg-slate-50 text-slate-700'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="removalReason"
-                        checked={removalReason === r}
-                        onChange={() => setRemovalReason(r)}
-                      />
-                      <span>{r}</span>
+                  <div>
+                    <label className="block font-bold text-slate-700 uppercase tracking-wider mb-2">
+                      Select Removal Reason:
                     </label>
-                  ))}
-                </div>
-              </div>
+                    <div className="space-y-2">
+                      {[
+                        'Not expected on this blog / Off-topic',
+                        'Unverified or inaccurate claims',
+                        'Duplicate or redundant coverage',
+                        'Editorial discretion / Retraction',
+                        'Sensationalized or uncorroborated headline',
+                        'Custom Reason'
+                      ].map(r => (
+                        <label
+                          key={r}
+                          className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer ${
+                            removalReason === r
+                              ? 'border-red-600 bg-red-50 text-red-950 font-bold'
+                              : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="removalReason"
+                            checked={removalReason === r}
+                            onChange={() => setRemovalReason(r)}
+                          />
+                          <span>{r}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
 
-              {removalReason === 'Custom Reason' && (
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">
-                    Custom Editorial Note:
+                  {removalReason === 'Custom Reason' && (
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">
+                        Custom Editorial Note:
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={customReason}
+                        onChange={e => setCustomReason(e.target.value)}
+                        placeholder="Enter explanation for takedown..."
+                        className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-xs"
+                      />
+                    </div>
+                  )}
+
+                  <label className="flex items-center gap-2 pt-2 border-t border-slate-200 cursor-pointer text-slate-700 font-semibold">
+                    <input
+                      type="checkbox"
+                      checked={permanentDelete}
+                      onChange={e => setPermanentDelete(e.target.checked)}
+                      className="rounded text-red-600"
+                    />
+                    <span>Delete permanently (purge from all database records)</span>
                   </label>
-                  <textarea
-                    rows={2}
-                    value={customReason}
-                    onChange={e => setCustomReason(e.target.value)}
-                    placeholder="Enter reason..."
-                    className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg"
-                  />
-                </div>
-              )}
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200">
-                <button
-                  type="button"
-                  onClick={() => setShowRemoveDialog(false)}
-                  className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  disabled={isRemoving}
-                  onClick={handleConfirmRemoval}
-                  className="px-4 py-2 bg-[#991B1B] hover:bg-red-800 text-white font-bold rounded-lg flex items-center gap-1.5 shadow-sm cursor-pointer disabled:opacity-50"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  {isRemoving ? 'Taking down...' : 'Confirm Removal'}
-                </button>
-              </div>
+                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200">
+                    <button
+                      type="button"
+                      onClick={() => setShowRemoveDialog(false)}
+                      className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isRemoving}
+                      onClick={handleConfirmRemoval}
+                      className="px-4 py-2 bg-[#991B1B] hover:bg-red-800 text-white font-bold rounded-lg flex items-center gap-1.5 shadow-sm cursor-pointer disabled:opacity-50"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      {isRemoving ? 'Removing from live blog...' : 'Confirm Removal'}
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
