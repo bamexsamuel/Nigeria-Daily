@@ -1,26 +1,36 @@
 import React, { useState } from 'react';
 import { Story } from '../types';
 import { 
-   X, Clock, ExternalLink, ShieldCheck, Share2, 
-   Check, Tag, ArrowLeft, Bookmark, CheckCircle2, Newspaper
- } from 'lucide-react';
+  X, Clock, ExternalLink, ShieldCheck, Share2, 
+  Check, Tag, ArrowLeft, Bookmark, CheckCircle2, Newspaper,
+  ShieldAlert, Trash2, RotateCcw
+} from 'lucide-react';
 import { AdSlot } from './AdSlot';
+import { useAdminAuth } from '../context/AuthContext';
+import { api } from '../services/api';
 
 interface ArticleDetailModalProps {
   story: Story;
   onClose: () => void;
   onSelectRelatedStory: (story: Story) => void;
   allStories: Story[];
+  onStoryUpdated?: () => void;
 }
 
 export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
   story,
   onClose,
   onSelectRelatedStory,
-  allStories
+  allStories,
+  onStoryUpdated
 }) => {
+  const { isAuthenticated, user } = useAdminAuth();
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [showRemoveDialog, setShowRemoveDialog] = useState(false);
+  const [removalReason, setRemovalReason] = useState('Not expected on this blog / Off-topic');
+  const [customReason, setCustomReason] = useState('');
+  const [isRemoving, setIsRemoving] = useState(false);
 
   const formatFullDate = (dateStr: string) => {
     const d = new Date(dateStr);
@@ -54,6 +64,26 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
     }
   };
 
+  const handleConfirmRemoval = async () => {
+    setIsRemoving(true);
+    const finalReason = removalReason === 'Custom Reason' ? (customReason || 'Editorial discretion') : removalReason;
+
+    try {
+      await api.updateStory(story.id, {
+        status: 'rejected',
+        requiresReview: false,
+        reviewReason: `Removed by ${user?.name || 'Editor'}: ${finalReason}`
+      });
+      setShowRemoveDialog(false);
+      onStoryUpdated?.();
+      onClose();
+    } catch (err) {
+      console.error('Failed to remove story', err);
+    } finally {
+      setIsRemoving(false);
+    }
+  };
+
   const related = allStories
     .filter(s => s.id !== story.id && (s.category === story.category || s.primarySourceName === story.primarySourceName))
     .slice(0, 3);
@@ -75,6 +105,18 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
           </button>
 
           <div className="flex items-center gap-2">
+            {/* Editor Quick Action Button if Logged In */}
+            {isAuthenticated && (
+              <button
+                onClick={() => setShowRemoveDialog(true)}
+                className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs mr-2"
+                title="Remove this post from public blog"
+              >
+                <ShieldAlert className="w-3.5 h-3.5 text-red-600" />
+                <span>Remove From Blog</span>
+              </button>
+            )}
+
             <button
               onClick={() => setSaved(!saved)}
               className={`p-2 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer ${
@@ -88,20 +130,53 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
 
             <button
               onClick={() => handleShare('whatsapp')}
-              className="bg-[#008751] hover:bg-emerald-800 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+              className="p-2 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-semibold flex items-center gap-1 cursor-pointer"
+              title="Share to WhatsApp"
             >
               <Share2 className="w-3.5 h-3.5" />
-              Share
+              <span className="hidden sm:inline">WhatsApp</span>
             </button>
 
             <button
+              onClick={() => handleShare('copy')}
+              className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-1 cursor-pointer"
+              title="Copy link"
+            >
+              {copied ? <Check className="w-3.5 h-3.5 text-[#008751]" /> : <ExternalLink className="w-3.5 h-3.5" />}
+              <span className="hidden sm:inline">{copied ? 'Copied' : 'Link'}</span>
+            </button>
+
+            <div className="h-4 w-px bg-slate-300 mx-1"></div>
+
+            <button
               onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+              className="p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
+
+        {/* Admin Editorial Moderation Banner if Logged In */}
+        {isAuthenticated && (
+          <div className="bg-slate-900 text-white px-4 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 text-xs">
+            <div className="flex items-center gap-2">
+              <span className="bg-[#008751] text-white font-bold text-[10px] px-1.5 py-0.2 rounded uppercase">
+                ADMIN MODERATION ACTIVE
+              </span>
+              <span className="text-slate-300">
+                Confidence: <strong className="text-emerald-400 font-mono">{story.confidenceScore}%</strong> • Status: <strong>{story.status}</strong>
+              </span>
+            </div>
+            <button
+              onClick={() => setShowRemoveDialog(true)}
+              className="text-red-300 hover:text-white bg-red-950/70 hover:bg-red-900 px-2.5 py-1 rounded font-semibold flex items-center gap-1 cursor-pointer border border-red-800"
+            >
+              <Trash2 className="w-3 h-3" />
+              Take Down Unexpected Post
+            </button>
+          </div>
+        )}
 
         {/* Modal Scrollable Article Body */}
         <div className="p-4 sm:p-8 md:p-10 max-h-[85vh] overflow-y-auto">
@@ -178,125 +253,88 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
                 href={story.primarySourceUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#008751] hover:bg-emerald-800 text-white text-xs font-bold rounded-lg transition-colors shrink-0 shadow-xs cursor-pointer"
+                className="inline-flex items-center gap-1.5 bg-[#008751] hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-2 rounded-lg transition-all shadow-xs cursor-pointer shrink-0"
               >
-                Read Original on {story.primarySourceName}
+                <span>Read on {story.primarySourceName}</span>
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
             </div>
           </div>
 
           {/* Featured Image */}
-          <div className="mb-6 rounded-xl overflow-hidden bg-slate-900 border border-slate-200">
+          <div className="relative aspect-16/9 w-full rounded-2xl overflow-hidden mb-6 bg-slate-900 shadow-md">
             <img
               src={story.image}
               alt={story.headline}
               referrerPolicy="no-referrer"
-              className="w-full max-h-[460px] object-cover"
+              className="w-full h-full object-cover"
             />
-            {story.imageCaption && (
-              <div className="bg-slate-900 text-slate-300 text-xs px-4 py-2 flex items-center justify-between">
-                <span>{story.imageCaption}</span>
-                {story.imageCredit && <span className="text-slate-400 text-[11px]">Photo Credit: {story.imageCredit}</span>}
-              </div>
-            )}
           </div>
 
-          {/* KEY POINTS BOX */}
+          {/* Key Facts / Intelligence Bullets */}
           {story.keyPoints && story.keyPoints.length > 0 && (
-            <div className="bg-amber-50/90 border border-amber-200 rounded-xl p-5 mb-8">
-              <h2 className="text-xs font-black uppercase tracking-wider text-amber-950 mb-3 flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-amber-600"></span>
-                Key Points & Takeaways
-              </h2>
-              <ul className="space-y-2">
-                {story.keyPoints.map((point, index) => (
-                  <li key={index} className="flex items-start gap-2.5 text-sm text-slate-800 leading-snug">
-                    <span className="text-amber-700 font-bold mt-0.5">•</span>
-                    <span>{point}</span>
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-8">
+              <h3 className="text-xs font-black uppercase tracking-wider text-slate-900 mb-3 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#008751]"></span>
+                Essential Dispatch Intelligence
+              </h3>
+              <ul className="space-y-2.5">
+                {story.keyPoints.map((kp, idx) => (
+                  <li key={idx} className="text-xs text-slate-700 flex items-start gap-2.5 leading-relaxed">
+                    <span className="w-4 h-4 rounded-full bg-emerald-100 text-[#008751] font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">
+                      {idx + 1}
+                    </span>
+                    <span>{kp}</span>
                   </li>
                 ))}
               </ul>
             </div>
           )}
 
-          {/* STRUCTURED ARTICLE BODY */}
-          <div className="space-y-6 text-slate-800 text-base leading-relaxed font-serif">
-            {/* Section 1: What Happened? */}
-            {story.whatHappened && (
-              <div>
-                <h3 className="text-lg font-bold font-sans text-slate-900 mb-2 border-b border-slate-100 pb-1 flex items-center gap-2">
-                  <span className="text-[#008751] font-mono text-sm font-bold">01.</span> What Happened?
-                </h3>
-                <p className="whitespace-pre-line font-serif">{story.whatHappened}</p>
-              </div>
-            )}
-
-            {/* In-Article Ad Slot */}
-            <AdSlot format="in-feed" label="Sponsored Announcement" />
-
-            {/* Section 2: Detailed Story */}
-            {story.mainStory && (
-              <div>
-                <h3 className="text-lg font-bold font-sans text-slate-900 mb-2 border-b border-slate-100 pb-1 flex items-center gap-2">
-                  <span className="text-[#008751] font-mono text-sm font-bold">02.</span> Main Story & Facts
-                </h3>
-                <p className="whitespace-pre-line font-serif">{story.mainStory}</p>
-              </div>
-            )}
-
-            {/* Section 3: Background */}
-            {story.background && (
-              <div>
-                <h3 className="text-lg font-bold font-sans text-slate-900 mb-2 border-b border-slate-100 pb-1 flex items-center gap-2">
-                  <span className="text-[#008751] font-mono text-sm font-bold">03.</span> National Context & Analysis
-                </h3>
-                <p className="whitespace-pre-line text-slate-700 font-serif">{story.background}</p>
-              </div>
-            )}
-
-            {/* Section 4: What Happens Next? */}
-            {story.whatHappensNext && (
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                <h3 className="text-base font-bold font-sans text-slate-900 mb-1.5 flex items-center gap-2">
-                  <span className="text-[#008751] font-mono text-sm font-bold">04.</span> What Happens Next?
-                </h3>
-                <p className="whitespace-pre-line text-slate-700 text-sm font-sans">{story.whatHappensNext}</p>
-              </div>
-            )}
+          {/* Full Synthesized Narrative */}
+          <div className="prose prose-slate max-w-none mb-8 text-slate-900 text-sm leading-relaxed font-serif space-y-4">
+            {story.article.split('\n\n').map((para, i) => (
+              <p key={i} className="leading-relaxed">
+                {para}
+              </p>
+            ))}
           </div>
 
-          {/* Social Share Ribbon */}
-          <div className="my-8 pt-6 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
-              Share This Verified Dispatch:
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => handleShare('whatsapp')}
-                className="px-3 py-1.5 bg-[#008751] hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow-xs cursor-pointer"
-              >
-                WhatsApp
-              </button>
-              <button
-                onClick={() => handleShare('x')}
-                className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow-xs cursor-pointer"
-              >
-                X (Twitter)
-              </button>
-              <button
-                onClick={() => handleShare('facebook')}
-                className="px-3 py-1.5 bg-blue-700 hover:bg-blue-800 text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow-xs cursor-pointer"
-              >
-                Facebook
-              </button>
-              <button
-                onClick={() => handleShare('copy')}
-                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold flex items-center gap-1 border border-slate-200 cursor-pointer"
-              >
-                {copied ? <Check className="w-3 h-3 text-[#008751]" /> : null}
-                {copied ? 'Copied Link' : 'Copy Link'}
-              </button>
+          {/* Mid-Article In-Feed Ad Slot */}
+          <div className="my-8">
+            <AdSlot format="banner" label="Editorial Partner Placement" />
+          </div>
+
+          {/* Multi-Source Corroboration Transparency Box */}
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-8">
+            <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-200">
+              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-[#008751]" />
+                Direct Source Outlets & Original Coverage
+              </h3>
+              <span className="text-[11px] font-mono text-[#008751] font-bold">
+                {story.confidenceScore}% Fact Accuracy
+              </span>
+            </div>
+
+            <div className="space-y-2">
+              {story.sources.map((src, i) => (
+                <div key={i} className="flex items-center justify-between text-xs p-2.5 bg-white rounded-lg border border-slate-200/80">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#008751]"></span>
+                    <span className="font-bold text-slate-900">{src.sourceName}</span>
+                    <span className="text-slate-400">({src.category})</span>
+                  </div>
+                  <a
+                    href={src.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[#008751] font-bold hover:underline flex items-center gap-1"
+                  >
+                    View Source Report <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -368,6 +406,101 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
           )}
         </div>
       </div>
+
+      {/* Takedown Confirmation Modal */}
+      {showRemoveDialog && (
+        <div className="fixed inset-0 z-60 overflow-y-auto bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
+            <div className="bg-[#991B1B] text-white p-5 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ShieldAlert className="w-5 h-5" />
+                <h3 className="text-sm font-bold font-serif text-white">
+                  Remove Article from Live Blog
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowRemoveDialog(false)}
+                className="text-red-200 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4 text-xs">
+              <p className="text-slate-600">
+                This will immediately remove <strong>"{story.headline}"</strong> from the public feed and archive it in the Newsroom Analysis Audit tab.
+              </p>
+
+              <div>
+                <label className="block font-bold text-slate-700 uppercase tracking-wider mb-2">
+                  Select Reason:
+                </label>
+                <div className="space-y-2">
+                  {[
+                    'Not expected on this blog / Off-topic',
+                    'Unverified or inaccurate claims',
+                    'Duplicate or redundant coverage',
+                    'Editorial discretion / Retraction',
+                    'Sensationalized or uncorroborated headline',
+                    'Custom Reason'
+                  ].map(r => (
+                    <label
+                      key={r}
+                      className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer ${
+                        removalReason === r
+                          ? 'border-red-600 bg-red-50 text-red-950 font-bold'
+                          : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="removalReason"
+                        checked={removalReason === r}
+                        onChange={() => setRemovalReason(r)}
+                      />
+                      <span>{r}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {removalReason === 'Custom Reason' && (
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Custom Editorial Note:
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={customReason}
+                    onChange={e => setCustomReason(e.target.value)}
+                    placeholder="Enter reason..."
+                    className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg"
+                  />
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setShowRemoveDialog(false)}
+                  className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isRemoving}
+                  onClick={handleConfirmRemoval}
+                  className="px-4 py-2 bg-[#991B1B] hover:bg-red-800 text-white font-bold rounded-lg flex items-center gap-1.5 shadow-sm cursor-pointer disabled:opacity-50"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  {isRemoving ? 'Taking down...' : 'Confirm Removal'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

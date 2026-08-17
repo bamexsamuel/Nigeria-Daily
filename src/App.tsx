@@ -12,15 +12,20 @@ import { LatestNewsFeed } from './components/LatestNewsFeed';
 import { TrendingSidebar } from './components/TrendingSidebar';
 import { ArticleDetailModal } from './components/ArticleDetailModal';
 import { AdminDashboard } from './components/Admin/AdminDashboard';
+import { AdminLoginModal } from './components/Admin/AdminLoginModal';
 import { PolicyModal } from './components/PolicyModal';
 import { Footer } from './components/Footer';
 import { AdSlot } from './components/AdSlot';
 import { GroqChatBox } from './components/GroqChatBox';
+import { AuthProvider, useAdminAuth } from './context/AuthContext';
 import { 
-  Sparkles, RefreshCw, AlertCircle, Layers, Filter, ShieldCheck, Flame, Zap, ArrowRight 
+  Sparkles, RefreshCw, AlertCircle, Layers, Filter, ShieldCheck, 
+  Flame, Zap, ArrowRight, ShieldAlert, CheckCircle2 
 } from 'lucide-react';
 
-export default function App() {
+function AppContent() {
+  const { isAuthenticated, showLoginModal, setShowLoginModal } = useAdminAuth();
+
   // State - seeded with initial news so content displays instantly
   const [stories, setStories] = useState<Story[]>(SEED_STORIES);
   const [sources, setSources] = useState<NewsSource[]>(TOP_FIVE_NIGERIAN_SOURCES);
@@ -149,19 +154,21 @@ export default function App() {
     setSelectedStory(story);
     try {
       await api.incrementStoryViews(story.id);
-      // Increment local count
       setStories(prev => prev.map(s => s.id === story.id ? { ...s, views: s.views + 1 } : s));
     } catch (e) {
       console.error(e);
     }
   };
 
-  const handleManualSync = async () => {
-    try {
-      await api.syncAllSources();
-      await loadData();
-    } catch (err) {
-      console.error(err);
+  const handleToggleAdmin = () => {
+    if (viewMode === 'admin') {
+      setViewMode('public');
+    } else {
+      if (!isAuthenticated) {
+        setShowLoginModal(true);
+      } else {
+        setViewMode('admin');
+      }
     }
   };
 
@@ -180,8 +187,8 @@ export default function App() {
     );
   }
 
-  // Admin View
-  if (viewMode === 'admin' && stats && settings) {
+  // Admin View (Protected)
+  if (viewMode === 'admin' && isAuthenticated && stats && settings) {
     return (
       <AdminDashboard
         stats={stats}
@@ -212,7 +219,7 @@ export default function App() {
           const story = stories.find(s => s.id === id);
           if (story) handleSelectStory(story);
         }}
-        onOpenAdmin={() => setViewMode(viewMode === 'public' ? 'admin' : 'public')}
+        onOpenAdmin={handleToggleAdmin}
         isAdminOpen={viewMode === 'admin'}
         onOpenPolicy={setActivePolicy}
         onOpenGroqChat={() => {
@@ -220,7 +227,6 @@ export default function App() {
           setIsGroqChatOpen(true);
         }}
       />
-
 
       {/* Main Content Area */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 flex-1 w-full">
@@ -370,7 +376,6 @@ export default function App() {
             </div>
 
             {/* MAIN 3-COLUMN EDITORIAL GRID */}
-
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
               {/* Main Feed Column (8 cols) */}
               <div className="lg:col-span-8 space-y-6">
@@ -425,8 +430,16 @@ export default function App() {
           onClose={() => setSelectedStory(null)}
           onSelectRelatedStory={handleSelectStory}
           allStories={publishedStories}
+          onStoryUpdated={loadData}
         />
       )}
+
+      {/* Admin Login Modal */}
+      <AdminLoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onSuccess={() => setViewMode('admin')}
+      />
 
       {/* Policy & Transparency Modals */}
       {activePolicy && (
@@ -456,3 +469,10 @@ export default function App() {
   );
 }
 
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
+}
