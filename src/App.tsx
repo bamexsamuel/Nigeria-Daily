@@ -90,15 +90,42 @@ function AppContent() {
   useEffect(() => {
     loadData();
 
+    // Trigger initial background sync across all beats (Technology, Sports, Education, Business, etc.)
+    const initialSyncTimer = setTimeout(async () => {
+      try {
+        await api.syncAllSources();
+        const updatedStories = await api.getStories();
+        if (updatedStories && updatedStories.length > 0) {
+          setStories(updatedStories);
+        }
+        const updatedStats = await api.getStats();
+        if (updatedStats) {
+          setStats(updatedStats);
+        }
+      } catch (e) {
+        console.warn('Initial background sync note:', e);
+      }
+    }, 800);
+
     // Auto poll every 45s for fresh Nigerian news updates
-    const interval = setInterval(() => {
-      api.getStories().then(res => {
-        if (res && res.length > 0) setStories(res);
-      }).catch(() => {});
-      api.getStats().then(setStats).catch(() => {});
+    const interval = setInterval(async () => {
+      try {
+        await api.syncAllSources();
+        const fresh = await api.getStories();
+        if (fresh && fresh.length > 0) setStories(fresh);
+        const stats = await api.getStats();
+        if (stats) setStats(stats);
+      } catch {
+        api.getStories().then(res => {
+          if (res && res.length > 0) setStories(res);
+        }).catch(() => {});
+      }
     }, 45000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(initialSyncTimer);
+      clearInterval(interval);
+    };
   }, []);
 
   const handleSyncLiveWire = async () => {

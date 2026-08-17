@@ -188,28 +188,46 @@ export const api = {
   },
 
   async syncAllSources(): Promise<any> {
+    let serverSynced = false;
     try {
       const res = await fetch('/api/sources/sync-all', { method: 'POST' });
       if (res.ok) {
-        const data = await res.json();
-        // Also refresh local cache from server
-        await this.getStories();
-        return data;
+        serverSynced = true;
       }
     } catch {}
 
-    // Fallback: direct client RSS sync (for Vercel & serverless)
+    // In all environments (Node, Vercel, another browser, mobile device), ALWAYS run direct client RSS sync
+    // to capture Technology, Sports, Education, Business, Entertainment, and Politics instantly
     const liveStories = await fetchLiveNigerianNews();
     const current = getLocalStories();
     const removedIds = getRemovedStoryIds();
     
     const newStories = liveStories.filter(s => 
       !removedIds.has(s.id) && 
-      !current.some(c => c.id === s.id || c.headline.toLowerCase() === s.headline.toLowerCase())
+      !current.some(c => c.id === s.id || c.headline.toLowerCase().trim() === s.headline.toLowerCase().trim())
     );
 
-    const merged = [...newStories, ...current];
+    let merged = [...newStories, ...current];
     saveLocalStories(merged);
+
+    // If server was synced, also fetch latest server list and merge
+    if (serverSynced) {
+      try {
+        const res = await fetch('/api/stories');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.stories && Array.isArray(data.stories)) {
+            const serverStories: Story[] = data.stories;
+            const existingIds = new Set(merged.map(s => s.id));
+            const serverOnly = serverStories.filter(s => !existingIds.has(s.id) && !removedIds.has(s.id));
+            merged = [...merged, ...serverOnly];
+            saveLocalStories(merged);
+            return { success: true, newArticles: newStories.length + serverOnly.length, totalArticles: merged.length };
+          }
+        }
+      } catch {}
+    }
+
     return { success: true, newArticles: newStories.length, totalArticles: merged.length };
   },
 

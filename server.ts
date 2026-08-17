@@ -23,6 +23,37 @@ async function startServer() {
   });
 
   // News Sources APIs
+  app.get('/api/proxy/feed', async (req: Request, res: Response) => {
+    const feedUrl = req.query.url as string;
+    if (!feedUrl) {
+      return res.status(400).json({ error: 'URL query parameter is required' });
+    }
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      const resp = await fetch(feedUrl, {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+          'Accept': 'application/rss+xml, application/xml, text/xml, application/atom+xml, text/html, */*'
+        }
+      });
+      clearTimeout(timeoutId);
+
+      if (!resp.ok) {
+        return res.status(resp.status).send(`Failed to fetch upstream feed: ${resp.statusText}`);
+      }
+
+      const text = await resp.text();
+      res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+      res.setHeader('Cache-Control', 'public, max-age=60');
+      res.send(text);
+    } catch (err: any) {
+      res.status(500).send(`Proxy fetch error: ${err.message}`);
+    }
+  });
+
   app.get('/api/sources', (req: Request, res: Response) => {
     res.json({ sources: db.getAllSources() });
   });

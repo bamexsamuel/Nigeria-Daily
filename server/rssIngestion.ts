@@ -109,26 +109,42 @@ async function fetchOgImageFromUrl(articleUrl: string): Promise<string | undefin
   return undefined;
 }
 
-// Feeds per source - prioritizing the fastest, canonical root feeds
+// Feeds per source - prioritizing high-yield feeds covering all news beats (Politics, Tech, Sports, Education, Business, Entertainment)
 const SOURCE_FEED_URLS: Record<string, string[]> = {
   'src-punch-ng': [
     'https://punchng.com/feed/',
-    'https://punchng.com/topics/news/feed/'
+    'https://punchng.com/topics/technology/feed/',
+    'https://punchng.com/topics/sports/feed/',
+    'https://punchng.com/topics/education/feed/',
+    'https://punchng.com/topics/business/feed/',
+    'https://punchng.com/topics/entertainment/feed/'
   ],
   'src-channels-tv': [
     'https://www.channelstv.com/feed/',
-    'https://www.channelstv.com/category/politics/feed/'
+    'https://www.channelstv.com/category/politics/feed/',
+    'https://www.channelstv.com/category/business/feed/',
+    'https://www.channelstv.com/category/sports/feed/'
   ],
   'src-premium-times': [
     'https://www.premiumtimesng.com/feed',
-    'https://www.premiumtimesng.com/category/news/feed'
+    'https://www.premiumtimesng.com/sports/feed',
+    'https://www.premiumtimesng.com/business/feed',
+    'https://www.premiumtimesng.com/entertainment/feed'
   ],
   'src-vanguard-ngr': [
-    'https://www.vanguardngr.com/feed/'
+    'https://www.vanguardngr.com/feed/',
+    'https://www.vanguardngr.com/category/technology/feed/',
+    'https://www.vanguardngr.com/category/sports/feed/',
+    'https://www.vanguardngr.com/category/education/feed/',
+    'https://www.vanguardngr.com/category/business/feed/',
+    'https://www.vanguardngr.com/category/entertainment/feed/'
   ],
   'src-guardian-ng': [
     'https://guardian.ng/feed/',
-    'https://guardian.ng/category/news/feed/'
+    'https://guardian.ng/category/technology/feed/',
+    'https://guardian.ng/category/sport/feed/',
+    'https://guardian.ng/category/business/feed/',
+    'https://guardian.ng/category/education/feed/'
   ]
 };
 
